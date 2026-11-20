@@ -1,0 +1,544 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <title>Calendario para Notion</title>
+
+  <style>
+    :root {
+      --negro: #000000;
+      --blanco: #ffffff;
+      --cabecera-dias: #0e1511;
+      --lineas: #161616;
+      --fecha-adyacente: #484848;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--negro);
+      color: var(--blanco);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .calendario {
+      width: 100%;
+      height: 100dvh;
+      min-height: 0;
+      border: 2px solid var(--blanco);
+      border-radius: 2px;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows:
+        clamp(40px, 16vh, 57px)
+        clamp(28px, 11vh, 39px)
+        minmax(0, 1fr);
+      background: var(--negro);
+    }
+
+    .encabezado {
+      display: grid;
+      grid-template-columns: 42px 1fr 42px;
+      align-items: center;
+      background: var(--blanco);
+      color: var(--negro);
+    }
+
+    button {
+      appearance: none;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .flecha {
+      height: 100%;
+      display: grid;
+      place-items: center;
+      padding: 0;
+    }
+
+    .flecha svg {
+      width: 11px;
+      height: 11px;
+      fill: var(--negro);
+    }
+
+    .mes-actual {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 3px;
+      padding: 0;
+      min-width: 0;
+      line-height: 1;
+    }
+
+    .mes-actual .mes {
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 21px;
+      white-space: nowrap;
+    }
+
+    .mes-actual .anio {
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 12px;
+    }
+
+    .dias-semana {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      align-items: center;
+      text-align: center;
+      background: var(--cabecera-dias);
+      border-bottom: 1px solid var(--lineas);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .cuadricula {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      grid-template-rows: repeat(6, minmax(0, 1fr));
+      min-height: 0;
+      background: var(--negro);
+    }
+
+    .dia {
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      padding: 0;
+      border-bottom: 1px solid var(--lineas);
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--blanco);
+      background: var(--negro);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .dia.fuera {
+      color: var(--fecha-adyacente);
+    }
+
+    .dia.seleccionado {
+      color: var(--negro);
+      background: var(--blanco);
+      font-weight: 700;
+    }
+
+    .dia:not(.seleccionado):hover {
+      background: #191919;
+    }
+
+    .dia.fuera:not(.seleccionado):hover {
+      color: #999999;
+    }
+
+    .dia:focus-visible,
+    .flecha:focus-visible,
+    .mes-actual:focus-visible {
+      outline: 2px solid currentColor;
+      outline-offset: -3px;
+    }
+
+    .dia:focus-visible {
+      outline-color: var(--blanco);
+    }
+
+    .dia.seleccionado:focus-visible {
+      outline-color: var(--negro);
+    }
+
+    @media (max-width: 235px) {
+      .mes-actual .mes {
+        font-size: 16px;
+      }
+
+      .dias-semana,
+      .dia {
+        font-size: 11px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="calendario"
+        aria-label="Calendario interactivo en español">
+
+    <div class="encabezado">
+
+      <button class="flecha"
+              id="anterior"
+              type="button"
+              aria-label="Mes anterior"
+              title="Mes anterior">
+        <svg viewBox="0 0 12 12" aria-hidden="true">
+          <path d="M2 6 10 1.6v8.8Z" />
+        </svg>
+      </button>
+
+      <button class="mes-actual"
+              id="volver-hoy"
+              type="button"
+              title="Volver al mes actual"
+              aria-label="Volver al mes actual">
+        <span class="mes" id="mes"></span>
+        <span class="anio" id="anio"></span>
+      </button>
+
+      <button class="flecha"
+              id="siguiente"
+              type="button"
+              aria-label="Mes siguiente"
+              title="Mes siguiente">
+        <svg viewBox="0 0 12 12" aria-hidden="true">
+          <path d="M10 6 2 1.6v8.8Z" />
+        </svg>
+      </button>
+
+    </div>
+
+    <div class="dias-semana"
+         aria-label="Días de la semana">
+      <span>Lu</span>
+      <span>Ma</span>
+      <span>Mi</span>
+      <span>Ju</span>
+      <span>Vi</span>
+      <span>Sá</span>
+      <span>Do</span>
+    </div>
+
+    <div class="cuadricula"
+         id="dias"
+         role="group"
+         aria-label="Días del mes">
+    </div>
+
+  </main>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const nombresMeses = [
+        'Enero',
+        'Febrero',
+        'Marzo',
+        'Abril',
+        'Mayo',
+        'Junio',
+        'Julio',
+        'Agosto',
+        'Septiembre',
+        'Octubre',
+        'Noviembre',
+        'Diciembre'
+      ];
+
+      const fechaCompleta =
+        new Intl.DateTimeFormat('es-PE', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        });
+
+      const fechaInicial = new Date();
+
+      let hoy = new Date(
+        fechaInicial.getFullYear(),
+        fechaInicial.getMonth(),
+        fechaInicial.getDate()
+      );
+
+      let vista = new Date(
+        hoy.getFullYear(),
+        hoy.getMonth(),
+        1
+      );
+
+      let seleccion = new Date(hoy);
+      let seguirHoy = true;
+      let viendoActual = true;
+      let reloj;
+
+      const mesTitulo =
+        document.getElementById('mes');
+
+      const anioTitulo =
+        document.getElementById('anio');
+
+      const dias =
+        document.getElementById('dias');
+
+      const anterior =
+        document.getElementById('anterior');
+
+      const siguiente =
+        document.getElementById('siguiente');
+
+      const volverHoy =
+        document.getElementById('volver-hoy');
+
+      function igualDia(a, b) {
+        return (
+          a.getFullYear() === b.getFullYear() &&
+          a.getMonth() === b.getMonth() &&
+          a.getDate() === b.getDate()
+        );
+      }
+
+      function mostrarCalendario() {
+        const anio = vista.getFullYear();
+        const mes = vista.getMonth();
+
+        mesTitulo.textContent = nombresMeses[mes];
+        anioTitulo.textContent = String(anio);
+
+        volverHoy.setAttribute(
+          'aria-label',
+          `${nombresMeses[mes]} de ${anio}. Pulsar para volver al mes actual`
+        );
+
+        dias.setAttribute(
+          'aria-label',
+          `${nombresMeses[mes]} de ${anio}`
+        );
+
+        dias.replaceChildren();
+
+        // La semana empieza el lunes.
+        const primerDia =
+          (new Date(anio, mes, 1).getDay() + 6) % 7;
+
+        const fragmento =
+          document.createDocumentFragment();
+
+        // Mostrar 42 días: 6 filas de 7 columnas.
+        for (let i = 0; i < 42; i++) {
+
+          const fecha = new Date(
+            anio,
+            mes,
+            i - primerDia + 1,
+            12
+          );
+
+          const esDelMes =
+            fecha.getMonth() === mes;
+
+          const esSeleccionada =
+            igualDia(fecha, seleccion);
+
+          const esHoy =
+            igualDia(fecha, hoy);
+
+          const boton =
+            document.createElement('button');
+
+          boton.type = 'button';
+
+          boton.className =
+            'dia' +
+            (esDelMes ? '' : ' fuera') +
+            (esSeleccionada ? ' seleccionado' : '');
+
+          boton.textContent =
+            String(fecha.getDate());
+
+          boton.setAttribute(
+            'aria-label',
+            fechaCompleta.format(fecha) +
+            (esHoy ? ', hoy' : '')
+          );
+
+          boton.setAttribute(
+            'aria-pressed',
+            String(esSeleccionada)
+          );
+
+          if (esHoy) {
+            boton.setAttribute(
+              'aria-current',
+              'date'
+            );
+          }
+
+          boton.title =
+            fechaCompleta.format(fecha) +
+            (esHoy ? ' · Hoy' : '');
+
+          boton.addEventListener('click', () => {
+
+            seleccion = new Date(
+              fecha.getFullYear(),
+              fecha.getMonth(),
+              fecha.getDate()
+            );
+
+            seguirHoy = false;
+
+            if (!esDelMes) {
+              vista = new Date(
+                fecha.getFullYear(),
+                fecha.getMonth(),
+                1
+              );
+            }
+
+            mostrarCalendario();
+          });
+
+          fragmento.appendChild(boton);
+        }
+
+        dias.appendChild(fragmento);
+      }
+
+      function cambiarMes(paso) {
+
+        vista = new Date(
+          vista.getFullYear(),
+          vista.getMonth() + paso,
+          1
+        );
+
+        viendoActual = false;
+
+        mostrarCalendario();
+      }
+
+      function comprobarFecha() {
+
+        const ahora = new Date();
+
+        const fechaActual = new Date(
+          ahora.getFullYear(),
+          ahora.getMonth(),
+          ahora.getDate()
+        );
+
+        if (!igualDia(fechaActual, hoy)) {
+
+          hoy = fechaActual;
+
+          if (seguirHoy) {
+            seleccion = new Date(hoy);
+          }
+
+          if (viendoActual) {
+            vista = new Date(
+              hoy.getFullYear(),
+              hoy.getMonth(),
+              1
+            );
+          }
+
+          mostrarCalendario();
+        }
+      }
+
+      function regresarHoy() {
+
+        comprobarFecha();
+
+        vista = new Date(
+          hoy.getFullYear(),
+          hoy.getMonth(),
+          1
+        );
+
+        seleccion = new Date(hoy);
+
+        seguirHoy = true;
+        viendoActual = true;
+
+        mostrarCalendario();
+      }
+
+      function programarActualizacion() {
+
+        clearTimeout(reloj);
+
+        const ahora = new Date();
+
+        const medianoche = new Date(
+          ahora.getFullYear(),
+          ahora.getMonth(),
+          ahora.getDate() + 1
+        );
+
+        reloj = setTimeout(() => {
+
+          comprobarFecha();
+          programarActualizacion();
+
+        }, Math.max(
+          1000,
+          medianoche - ahora + 150
+        ));
+      }
+
+      anterior.addEventListener(
+        'click',
+        () => cambiarMes(-1)
+      );
+
+      siguiente.addEventListener(
+        'click',
+        () => cambiarMes(1)
+      );
+
+      volverHoy.addEventListener(
+        'click',
+        regresarHoy
+      );
+
+      document.addEventListener(
+        'visibilitychange',
+        () => {
+          if (!document.hidden) {
+            comprobarFecha();
+            programarActualizacion();
+          }
+        }
+      );
+
+      window.addEventListener(
+        'focus',
+        () => {
+          comprobarFecha();
+          programarActualizacion();
+        }
+      );
+
+      mostrarCalendario();
+      programarActualizacion();
+
+    })();
+  </script>
+
+</body>
+</html>
